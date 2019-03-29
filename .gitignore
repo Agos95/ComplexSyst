@@ -1,2 +1,4 @@
 # Jupyter notebook checkpoints folders
 **/.ipynb_checkpoints
+# Figure folder
+**/Figure

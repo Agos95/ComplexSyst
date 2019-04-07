@@ -1,0 +1,352 @@
+\documentclass[a4paper,11pt]{article}
+\usepackage[left=2cm, right=2cm, top=2cm]{geometry}
+%\usepackage[big]{layaureo}
+\usepackage[T1] {fontenc}
+\usepackage[utf8]{inputenc}
+%\usepackage[italian] {babel}
+\usepackage{textcomp}
+\usepackage{amsmath}
+\usepackage{longtable}
+\usepackage{amssymb}
+\usepackage{graphicx}
+\usepackage{multirow}
+\usepackage{caption}
+  \captionsetup{format=plain,labelfont=bf,textfont=it, font=small}
+\usepackage{subcaption}
+  \captionsetup[sub]{position=top}
+  \captionsetup[sub]{font=footnotesize}
+  \captionsetup[sub]{labelfont={bf,sc}}
+  \captionsetup[sub]{format=hang}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{siunitx}
+\usepackage{color}
+\usepackage{float}
+\usepackage{wrapfig}
+\usepackage{comment}
+
+
+\title{Exercise 01 - Application of Maximum Entropy and Network analysis}
+\author{Federico Agostini, Federico Bottaro, Gianmarco Pompeo}
+\date{}
+
+\begin{document}
+
+\maketitle
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\section{Introduction}
+We are presented with a dataset containing information about a 2005 tree census performed at the Barro Colorado Island in Panama. The flora of this 50-hectare piece of land has been classified according to several parameters since 1982 and censused accordingly every 5 years.
+\\
+The scope of this studies is to retrieve information about the dataset and to apply the Maximum Entropy method in order to be able to model different scenarioes.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\section{Presentation of the data}
+
+The whole dataset is made of 368,123 rows, but we will trim it by removing all the dead plants; furthermore, we will only be considering the species classification and the coordinates of the censused trees, disregarding all the other parameters. 
+
+The total number of alive trees is 208,387 consisting of about 56.6\% of the whole dataset. The total number of different species is $S=299$.
+In Fig.~\ref{fig:forest} there is a visualization of how the species are distributed around the island.
+
+\begin{figure}[htp]
+    \centering
+    \includegraphics[width=0.9\textwidth]{./Figure/forest.png}
+    \caption{Distribution of alive species around the island, where different colors indicate different species. As we can see the plot shows a big variety of species and they are well mixed; the dashed grid separates the different subplots.}
+    \label{fig:forest}
+\end{figure}
+
+We divide such plot into regularly-shaped subplots of 0.25 hectares each, meaning we will have 200 subplots $50 \times 50$ m  in size. We will assume these subplots to be statistically independent in order to be able to perform analysis on them.
+\\
+We build the matrix of the abundances \textbf{X}, where $X_{ij}$ is the number of individuals of species $j$ in subplot $i$; moreover, we also consider the vector of presence $p_i$ (for $i=1,\dots,S$) averaged over the subplots - that is, an average of 1 or 0 across each subplot depending on whether species $i$ is present or not in the subplot itself.
+\\
+Given that the size of the dataset is considerable, we represent these objects only graphically and we invite the reader to look at the Jupyter Notebook (from here, \texttt{JN}) for an explicit display of all their values.
+
+\begin{figure}[htp]
+\centering
+\begin{subfigure}[t]{0.49\textwidth}
+    \centering
+    \includegraphics[width=\textwidth]{./Figure/abundance_matrix.pdf}
+    \caption{Heatmap of the abundance matrix \textbf{X}.}
+    \label{fig:abundance_matrix_heatmap}
+\end{subfigure}
+\begin{subfigure}[t]{0.49\textwidth}
+    \centering
+    \includegraphics[width=\textwidth]{./Figure/average_presence_heatmap.pdf}
+    \caption{Heatmap of the vector of presences $p_i$ averaged over the subplots.}
+    \label{fig:average_presence_heatmap}
+\end{subfigure}
+\caption{Graphical representation of the abundace matrix and average presence vector.}
+\label{fig:species_heatmaps}
+\end{figure}
+
+In the abundance matrix we find that there are very few species that are highly dominant; to make the heatmap of \textbf{X} easier to interpret, we have decided to represent species that occur more than 100 times with the same color: this helps to discriminate the presence and the geographic distribution of the huge majority of the species which occur not quite as often (anyways, the original abundance matrix can still be found in the $\Rightarrow$ \texttt{JN}).
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\section{Application of Maximum Entropy}
+
+We consider three different models whose parameters are computed using the Maximum Entropy method (\emph{Max Ent} in the following).
+
+%%%%%%%%%%%%%%%%%%%%%%%%
+
+\subsection{Maximum Entropy Model 1}
+
+In the following subsection we present a first attempt at building a Max Ent 1 model on the dataset. In this first simple model the hamiltonian and the constraints are:
+\begin{equation}
+    \label{eq:MaxEnt1}
+    \mathcal{H}_1 = -\sum_{i=1}^S \lambda_i \sigma_i \qquad,\qquad \frac{1+m_i}{2}= p_i  \qquad i=1,...,S
+\end{equation}
+with $\bigl\langle \sigma_i \bigr\rangle _{emp} = m_i$. This relation serves the purpose of introducing a new average presence obtained by assigning a value of $1$ to the presence of a species and a value of $-1$ instead of $0$ to the absence: in this way it is possible to map this task into an Ising-like model.
+
+At this stage we do not need to simulate anything to find the lagrangian parameters $\lambda_i$ because it is possible to obtain analytical solutions by considering the partition function of the system $\mathcal{Z}$, as shown in the following:
+
+\begin{equation}
+    \mathcal{Z}(\lambda_i) =\sum_{\{\sigma_i\}} e^{\sum_{i} \lambda_i \sigma_i }
+                           =\sum_{\{\sigma_i\}} \prod_{i} e^{\lambda_i \sigma_i }
+                           =\prod_{i}\sum_{\{\sigma_i\}} e^{\lambda_i \sigma_i } 
+                           =2^S \prod_{i} \cosh (\lambda_i)
+\end{equation}
+where $i=1,...,S$ and $\begin{matrix} \sum_{\{\sigma_i\}} \end{matrix}= \begin{matrix} \sum_{\sigma_i=-1,1} \end{matrix}$ represents the sum over all possible configurations.
+\\
+\begin{wrapfloat}{figure}{r}{0pt}
+%\begin{figure}[htp]
+    %\centering
+    \includegraphics[width=0.50\textwidth]{./Figure/MaxEnt1_Lambdas_hist}
+    \caption{Histogram of the values of $\lambda_i$ for Max Ent 1. Most of them are between -3 and 3, but there are also few parameters (3\%) that have an infinite value and they are not shown in this figure.}
+    \label{fig:ME1_lambda_hist}
+%\end{figure}
+\end{wrapfloat}
+From this, we analytically compute
+\begin{equation}
+    \bigl\langle \sigma_i \bigr\rangle = - \frac{\partial \ln \mathcal{Z}}{\partial \lambda_i}=- \tanh(\lambda_i)
+\end{equation}
+and obtain our $\lambda_i$ simply by inverting
+\begin{equation}
+    \lambda_i=\tanh^{-1}(m_i)\qquad  \textrm{i=1,...,299}
+\end{equation}
+
+In Fig.~\ref{fig:ME1_lambda_hist} it is possible to have a visual representation of these lagrangian parameters obtained using the script.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%
+
+\subsection{Maximum Entropy Model 2}
+For this second model we consider a slightly more complicated hamiltonian
+\begin{equation}
+    \mathcal{H}_2 = - \begin{matrix} \sum_{j=1}^S \lambda_j \sigma_j \end{matrix} - \frac{k}{S} \begin{matrix}  \left ( \sum_{j=1}^S \sigma_j \right )^2 \end{matrix}
+    \label{maxent2}
+\end{equation}
+containing a self-interaction term.
+\\
+In addition to the constraint of Max Ent 1 (eq.~\ref{eq:MaxEnt1}) we now have
+\begin{equation}
+    \begin{matrix}\left \langle \left ( \sum_{j=1}^S 
+    \sigma_j \right ) \right \rangle_{emp} \end{matrix} = \left \langle (S_+ - S_-)^2 \right \rangle_{emp}
+\end{equation}
+where $S_+$ and $S_-$ are the number of species respectively present or not in a given subplot.
+
+To estimate the lagrangian parameters and consequently build a model, we have to simulate the process because direct sampling as done previously is not feasible. For the simulation we use a \emph{Metropolis} algorithm which starts from a randomly initialized configuration and generates more according to Eq.~\ref{maxent2}, accepting them automatically if their value of energy is lower than the previous; if that is not the case the algorithm will accept the updated configuration with probability proportional to $e^{(E_{t}-E_{t+1})}$. 
+We tested the algorithm for 10,000 iterations and the system appears to have reached a minimum of the energy (apart from fluctuations) even after a couple thousands epochs; we hence decided to run the algorithm for 5,000 iterations when simulating data and then keep the final 25\% configurations.
+\\
+%Once we have obtained the virtual data, we calculate the lagrangian parameters $\lambda_i$ and $k$. To do so we choose $\lambda_i$ at random in [-3,3] (from Fig.~\ref{fig:ME1_lambda_hist}) and we initialize $k=1.1$; we use the following update rule
+The lagrangian parameters are calculated through a \emph{Gradient Descend} procedure, with the following update rule
+\begin{equation}
+    \lambda (t+1) = \lambda(t) + \eta (\left \langle \mathcal{C} \right \rangle_{emp} - \left \langle \mathcal{C} \right \rangle_{model})
+\end{equation}
+where $\eta$ is called learning rate, set to $10^{-3}$, and $\mathcal{C}$ represents the constraints computed either on the original data (\emph{emp}) or based on the model generated by \emph{Metropolis} (\emph{model}). At each iteration, the compute of $\left \langle \mathcal{C} \right \rangle_{model}$ is done using the states generated by the \emph{Metropolis} algorithm discussed above. 
+\\
+The final values of the parameters are obtained averaging the values from the final 15\% of iterations: this way we can smooth out possible fluctuations of the \emph{Gradient Descent} algorithm.
+
+In the plot (Fig.~\ref{fig:MaxEnt2_parameters}) we show how these parameters behave as the iteration process goes on.
+\begin{figure}[htp]
+\centering
+\begin{subfigure}[t]{0.49\textwidth}
+ \centering
+    \includegraphics[width=\textwidth]{./Figure/MaxEnt2_parameters_convergence.pdf}
+    \caption{Trend of $k$ and three randomly-chosen $\lambda_i$ over the 10,000 iterations. Convergence starts to be visible after a couple thousands iterations. The final values are calculated averaging over the last 1,500 iterations (marked with the yellow background in the plot.)}
+    \label{fig:MaxEnt2_parameters}
+\end{subfigure}
+\begin{subfigure}[t]{0.49\textwidth}
+\centering
+    \includegraphics[width=\textwidth]{./Figure/MaxEnt2_Lambdas_hist.pdf}
+    \caption{Histogram of the values of $\lambda_i$ for Max Ent 2.}
+    \label{fig:maxent2lambda}
+\end{subfigure}
+\caption{Results for the simulations performed for Max Ent 2.}
+\end{figure}
+We end up estimating:
+\begin{center}
+    $k=0.6731 \qquad ,$
+\end{center}
+while in the histogram to the right - Fig.~\ref{fig:maxent2lambda} - we show the distribution of the final 299 values found for the $\lambda_i$ ($\Rightarrow$ \texttt{JN} for the complete list of values). 
+\\
+We also introduced a Random Field model but, due to the limited space, this is not presented in this project (however, see $\Rightarrow$ \texttt{JN}).
+
+%%%%%%%%%%%%%%%%%%%%%%%%
+
+\subsection{Maximum Entropy Model 3}
+The last model we developed is related to the abundances of the species instead of their presence. As a matter of fact, to build this Max Ent 3 model we are going to impose two constraints,
+\begin{equation}
+    \left \langle x_i \right \rangle_{emp} = \left \langle x_i \right \rangle_{model}
+\end{equation}
+where $\left \langle x_i \right \rangle$ is the average abundance of a species over the subplots, and
+\begin{equation}
+    \left \langle x_i x_j \right \rangle_{emp} = \left \langle x_i x_j \right \rangle_{model}
+\end{equation}
+this time related to the two-point correlation function.
+\\
+Moreover we select only the species for which
+\begin{equation}
+    \left \langle x_i \right \rangle_{emp} - \sigma_{x,i} > 0
+\end{equation}
+where $\sigma_{x,i}$ is the standard deviation of the species $i$ calculated from the data (over the subplots).
+\\
+Following the maximum entropy principle it is possible to obtain an analytical solution to find the lagrangian parameters, that in this case are labeled $\mu_j$, related to the first constraint, and \textbf{M}, the interaction matrix deriving from the second one. 
+\\
+We now consider the probability of having the configuration $\Vec{x}$:
+\begin{equation}
+    P(\Vec{x})= \frac{1}{\mathcal{Z}} e^{ -\sum_{i=1}^S \mu_i x_i - \frac{1}{2} \sum_{i,j = 1}^S M_{ij}x_ix_j}
+\end{equation}
+Writing the partition function of the system explicitly in matricial form we obtain
+\begin{equation}
+\mathcal{Z}=\int e^{-\frac{1}{2} \Vec{x}^T \mathbf{M} \Vec{x} -\Vec{\mu}^T \cdot \Vec{x}}\, d\Vec{x}
+\end{equation}
+and by introducing the Gaussian approximation we get
+\begin{equation}
+    \Vec{\mu} = - \textbf{M} \Vec{\left \langle x_i \right \rangle}_{emp} \qquad , \qquad M_{ij}^{-1} = \left \langle (x_i - \left \langle x_i  \right \rangle)(x_j - \left \langle x_j  \right \rangle) \right \rangle
+\end{equation}
+In addition to that, we set all the diagonal values of \textbf{M} to $0$: this means we will be disregarding self-interactions.  
+\\
+As usual, in Fig.~\ref{fig:MaxEnt3_lagrangian} it is possible to visualize the distribution of the lagrangian parameters $\mu_j$ and the heatmap of the matrix \textbf{M} (obtained as the inverse of the covariance matrix) with the corresponding histogram showing the distribution of its values.
+
+\begin{figure}[htp]
+\centering
+\begin{subfigure}[b]{0.30\textwidth}
+    \centering
+    \includegraphics[width=\textwidth]{./Figure/MaxEnt3_mu_j.pdf}
+    \caption{Histogram of the values of $\mu_j$ for Max Ent 3.}
+    \label{fig:maxent3lambda}
+\end{subfigure}
+\begin{subfigure}[b]{.30\textwidth}
+  \centering
+  \includegraphics[width=\textwidth]{./Figure/MaxEnt3_M_matrix.pdf}
+  \caption{Heatmap of matrix \textbf{M}.}
+  \label{fig:MaxEnt3_M}
+\end{subfigure}%
+\begin{subfigure}[b]{.30\textwidth}
+  \centering
+  \includegraphics[width=\textwidth]{./Figure/MaxEnt3_mu_j.pdf}
+  \caption{Distribution of the entries of \textbf{M}.}
+  \label{fig:MaxEnt3_mu_j}
+\end{subfigure}
+\caption{Graphical visualizations of lagrangian parameters for Max Ent 3.}
+\label{fig:MaxEnt3_lagrangian}
+\end{figure}
+
+We can barely recognize any pattern in such distributions, but from the heatmap of the interaction matrix we see how very few species act as strong interacting nodes (most of the entries are dark, corresponding to a weak interaction strength).
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\section{Network analysis}
+
+\begin{wrapfloat}{figure}{r}{0pt}
+  \includegraphics[width=0.5\linewidth]{./Figure/Connected_component.pdf}
+  \caption{Number of connected components as a function of the threshold $\theta$; the orange star points out the value of $\theta^*$.}
+  \label{fig:theta_star}
+\end{wrapfloat}
+
+We consider the Max Ent 3 model we just built: the distribution of the entries of $M_{ij}$ is shown in Fig.~\ref{fig:MaxEnt3_mu_j}. 
+\\
+We can consider this matrix as a weighted adjacency graph $W$. If we select a threshold $\theta$ and put $M_{ij}=0$ if $|M_{ij}|<\theta$, we can study the number of connected components as a function of $\theta$ itself. Fig.~\ref{fig:theta_star} shows the behaviour of the graph as a function of this parameter: we can see there exists a critical value $\theta^*$ for which the number of single connected components becomes larger than one (the graph is not single-connected anymore).
+\\
+We find 
+\begin{center}
+    $\theta^* = 0.0031 \quad .$
+\end{center}
+
+We are now interested in studying the properties of $W^*$, the graph obtained with the highest value of $\theta$ that makes it single-connected (formally, $W^* \equiv W(\theta^* - \varepsilon)$ with $\varepsilon \rightarrow 0$). 
+\\
+\begin{figure}
+  \centering
+  \begin{subfigure}{.49\textwidth}
+    \includegraphics[width=\textwidth]{./Figure/graph.pdf}  %GRAPH
+  \caption{Graph of $W^*$.}
+  \label{fig:graph}
+  \end{subfigure}
+  \begin{subfigure}{.49\textwidth}
+  \includegraphics[width=\textwidth]{./Figure/graph_ER.pdf}  %GRAPH
+  \caption{Random ER graph generated for comparison.}
+  \label{fig:graph_ER}
+  \end{subfigure}
+  \caption{Graphical representation of the Network $W^*$ and the random Erdos-Rényi (ER) graph generated using a probability of connection $p= \frac{A_d}{N-1}$, where $A_d$ is the average degree of nodes in $W^*$ and $N$ is the number of nodes.}
+  \label{fig:networks}
+\end{figure}
+In Fig.~\ref{fig:graph} we can visualize such network. This graph has
+\begin{center}
+    $\mathcal{D} = diameter = 3$ \qquad $\mathcal{R} = radius = 2$ \qquad $(Deg)_{ass} = -0.2361$
+\end{center}
+Other properties are visually displayed in Fig.~\ref{fig:graph_parameters}, together with the subsequent comparison with the ER graph.
+As a last study, in fact, we compare the graph $W^*$ so obtained with a random Erdos-Rényi (ER) graph. We create that random graph using a probability of connection $p= \frac{A_d}{N-1}$ where $A_d$ is the average degree of nodes in $W^*$ and $N$ is the number of nodes; the links follow a binomial distribution. 
+\\
+In Tab.~\ref{tab:graph_parameters} and in Fig.~\ref{fig:graph_parameters} we can see the comparison between various features of the two graphs.
+
+%\begin{longtable}[htp]{ccccc}
+\begin{table}[htp]
+\centering
+\begin{tabular}{c|cccc}
+\toprule
+ & Radius & Diameter & Density & Clustering average  \\
+\midrule
+$W^*$    & 2 & 3 & 0.601 & 0.732 \\
+ER graph & 2 & 2 & 0.609 & 0.604 \\
+\bottomrule
+\bottomrule
+\end{tabular}
+\caption{Comparison of the most significant quantities of $W^*$ and the random ER graph (see Figure 8 for further visual comparisons).}
+\label{tab:graph_parameters}
+\end{table}
+%\end{longtable}
+
+We also display other properties of $W^*$ which are more meaningful graphically; in orange, the corresponding distributions for the random ER graph.
+\begin{figure}[htp]
+\centering
+\begin{subfigure}{.3\textwidth}
+  \centering
+  \includegraphics[width=\textwidth]{./Figure/Degree_distribution_comparison.pdf}
+  \caption{Histogram of the degrees of the nodes.}
+  \label{fig:degree_distribution}
+\end{subfigure}
+\begin{subfigure}{.3\textwidth}
+  \centering
+  \includegraphics[width=\textwidth]{./Figure/Cluster_coeff_comparison.pdf}
+  \caption{Histogram of the clustering coefficient.}
+  \label{fig:cluster_coeff}
+\end{subfigure}%
+\begin{subfigure}{.3\textwidth}
+  \centering
+  \includegraphics[width=\textwidth]{./Figure/Betweeness_centrality_comparison.pdf}
+  \caption{Histogram of the betweeness centrality.}
+  \label{fig:betweeness}
+\end{subfigure}
+\caption{Visualization of other properties of $W^*$. In orange the properties of the ER graph for comparison.}
+\label{fig:graph_parameters}
+\end{figure}
+
+%The comparison shows that the values look very little alike, which is somehow expected: the ER graph is generated randomly and it is only connected to $W^*$ through the parameters given in input. This graph, on the other hand, represents real interactions between different plant species (even if it has been somewhat manipulated throughout the analysis) and it appears safe to assume that such interactions do not happen simply at random.
+
+The comparison shows that the values look very little alike, which is somehow expected: the ER graph is generated randomly and it is only connected to $W^*$ through the parameters given in input. This graph, on the other hand, represents real interactions between different plant species and it appears safe to assume that such interactions do not happen simply at random.
+
+
+%BOTTARO
+\begin{comment}
+SEZIONE DELLE CORREZIONI DI BOTTA
+\begin{itemize}
+   
+    
+\end{itemize}
+\end{comment}
+
+
+\end{document}

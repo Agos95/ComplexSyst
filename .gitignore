@@ -2,3 +2,6 @@
 **/.ipynb_checkpoints
 # Figure folder
 **/Figure
+ 
+# Ex 02 iterations data
+./02/**/iterations
